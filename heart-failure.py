@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.ensemble import IsolationForest
+from sklearn.cluster import DBSCAN
 
 # Paso 1: Cargar los datos desde el archivo CSV
 df = pd.read_csv('./data/heart.csv')
@@ -37,6 +39,58 @@ df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
 # Mostrar el DataFrame procesado
 print("Datos procesados:")
 print(df.head())
+
+
+# =======================
+# Detección de anomalías
+# =======================
+
+# Detección de anomalías con Isolation Forest
+anomaly_detector = IsolationForest(contamination=0.05)  # 5% de los datos como anomalías
+df['Anomaly'] = anomaly_detector.fit_predict(df[numerical_columns])
+
+# El valor -1 indica una anomalía, mientras que 1 es una observación normal
+print("Datos con detección de anomalías:")
+print(df[['Age', 'RestingBP', 'Cholesterol', 'FastingBS', 'MaxHR', 'Oldpeak', 'Anomaly']].head())
+
+# Mostrar las observaciones consideradas anómalas
+anomalies = df[df['Anomaly'] == -1]
+print("\nAnomalías detectadas:")
+print(anomalies)
+
+# Visualizar las anomalías en un gráfico
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df, x='Age', y='MaxHR', hue='Anomaly', palette={1: 'blue', -1: 'red'})
+plt.title('Detección de anomalías')
+plt.xlabel('Edad')
+plt.ylabel('Frecuencia cardiaca máxima')
+plt.show()
+
+# Detección de anomalías con DBSCAN
+
+dbscan = DBSCAN(eps=0.85, min_samples=4)
+df['Anomaly_DBSCAN'] = dbscan.fit_predict(df[numerical_columns])
+
+# El valor -1 indica una anomalía, mientras que cualquier otro valor es parte de un cluster
+print("Datos con DBSCAN y detección de anomalías:")
+print(df[['Age', 'RestingBP', 'Cholesterol', 'FastingBS', 'MaxHR', 'Oldpeak', 'Anomaly_DBSCAN']].head())
+
+
+# Si hay más de dos valores, convertir cualquier valor mayor que -1 en "normal"
+df['Anomaly_DBSCAN'] = df['Anomaly_DBSCAN'].apply(lambda x: -1 if x == -1 else 1)
+
+# Mostrar las observaciones consideradas anómalas
+dbscan_anomalies = df[df['Anomaly_DBSCAN'] == -1]
+print("\nAnomalías detectadas con DBSCAN:")
+print(dbscan_anomalies)
+
+# Visualizar las anomalías de DBSCAN con una paleta automática
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df, x='Age', y='MaxHR', hue='Anomaly_DBSCAN', palette='Set1')
+plt.title('Detección de anomalías con DBSCAN')
+plt.xlabel('Edad')
+plt.ylabel('Frecuencia cardiaca máxima')
+plt.show()
 
 # =======================
 # Parte 1: Clustering

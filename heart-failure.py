@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import DBSCAN
+from mlxtend.frequent_patterns import apriori, association_rules
 
 # Paso 1: Cargar los datos desde el archivo CSV
 df = pd.read_csv('./data/heart.csv')
@@ -91,6 +92,51 @@ plt.title('Detección de anomalías con DBSCAN')
 plt.xlabel('Edad')
 plt.ylabel('Frecuencia cardiaca máxima')
 plt.show()
+
+# =======================
+# REGLAS DE ASOCIACIÓN
+# =======================
+
+# Paso 1: Convertir el DataFrame a un formato transaccional
+# Seleccionaremos solo las columnas relevantes
+transactional_data = df[['Age', 'RestingBP', 'Cholesterol', 'MaxHR']].copy()
+
+# Discretizamos variables numéricas en rangos y las convertimos a categóricas (opcional)
+transactional_data['Age'] = pd.cut(df['Age'], bins=3, labels=['Joven', 'Adulto', 'Mayor'])
+transactional_data['RestingBP'] = pd.cut(df['RestingBP'], bins=3, labels=['Bajo', 'Normal', 'Alto'])
+transactional_data['Cholesterol'] = pd.cut(df['Cholesterol'], bins=3, labels=['Bajo', 'Normal', 'Alto'])
+transactional_data['MaxHR'] = pd.cut(df['MaxHR'], bins=3, labels=['Bajo', 'Moderado', 'Alto'])
+
+# Crear variables dummies para convertir los datos en formato booleano
+boolean_data = pd.get_dummies(transactional_data)
+
+# Paso 2: Aplicar el algoritmo Apriori
+# Generamos conjuntos frecuentes con un soporte mínimo del 5% (ajustable)
+frequent_itemsets = apriori(boolean_data, min_support=0.05, use_colnames=True)
+
+# Mostrar los conjuntos frecuentes generados
+print("\nConjuntos frecuentes:")
+print(frequent_itemsets)
+
+
+# Calcular el número total de conjuntos frecuentes
+num_itemsets = len(frequent_itemsets)
+
+# Paso 3: Extraer reglas de asociación
+rules = association_rules(frequent_itemsets, num_itemsets=num_itemsets, metric="confidence", min_threshold=0.6)
+
+# Mostrar las reglas generadas
+print("\nReglas de asociación:")
+print(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+
+# Paso 4: Análisis de las reglas
+# Filtrar las reglas que tengan un lift mayor a 1 (indica relación positiva)
+significant_rules = rules[rules['lift'] > 1]
+
+print("\nReglas significativas:")
+print(significant_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+
+
 
 # =======================
 # Parte 1: Clustering
